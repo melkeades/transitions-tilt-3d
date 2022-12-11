@@ -150,4 +150,5 @@ function init() {
                 },
             })
         }, '1.6')
+    console.log('qwe')
 }
