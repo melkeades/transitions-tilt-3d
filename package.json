@@ -1,0 +1,28 @@
+{
+  "name": "transitions",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "eslint": "^8.29.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-sort-imports-es6-autofix": "^0.6.0",
+    "vite": "^3.2.3"
+  },
+  "dependencies": {
+    "@barba/core": "^2.9.7",
+    "@studio-freight/lenis": "^0.2.26",
+    "eslint-config-prettier": "^8.5.0",
+    "gsap": "^3.11.3",
+    "prettier": "^2.8.0",
+    "pug": "^3.0.2",
+    "stylus": "^0.59.0",
+    "vite-plugin-pug-transformer": "^1.0.2"
+  }
+}
