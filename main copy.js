@@ -12,12 +12,11 @@ const select = (element) => document.querySelector(element)
 
 let lenis
 
-let sec
-let container
-let containerWrapper
-let containerFg
-let containerBg
-let a = select('a')
+let secs
+const containerClass = '.container'
+const containerWrapperClass = containerClass + '-wrapper'
+const containerFgClass = containerClass + '__fg'
+const containerBgClass = containerClass + '__bg'
 
 let on = true
 let request = null
@@ -32,18 +31,8 @@ let degree = 0
 let cx = window.innerWidth / 2
 let cy = window.innerHeight / 2
 
-let contAni
 let tlContainerRotation, tlScroll
-
-window.addEventListener('mousemove', (e) => {
-    if (on) {
-        mouse.x = e.clientX
-        mouse.y = e.clientY
-
-        cancelAnimationFrame(request)
-        request = requestAnimationFrame(contAni)
-    }
-})
+let tlWorkOutroSec, tlWorkOutroSecCenter, tlWorkClicked
 
 CustomEase.create('backInOutExp', 'M0,0 C0.2,0 0.2,0.7 0.5,0.7 0.8,0.7 0.8,0 1,0')
 
@@ -54,8 +43,45 @@ function raf(time) {
 }
 requestAnimationFrame(raf)
 
-function animate3dTilt(element, placement) {
-    const dx = placement === 'right' ? mouse.x / 1.5 - cx : mouse.x - cx / 1.5
+window.addEventListener('mousemove', (e) => {
+    if (on) {
+        mouse.x = e.clientX
+        mouse.y = e.clientY
+
+        cancelAnimationFrame(request)
+        request = requestAnimationFrame(updateAnimate3dTile)
+    }
+})
+
+const updateAnimate3dTile = () => {
+    secs.forEach((element) => {
+        const secCont = element.querySelector(containerClass)
+        const elementClasses = element.classList
+        let direction
+
+        if (elementClasses.contains('sec--right')) {
+            direction = 'right'
+        } else if (elementClasses.contains('sec--left')) {
+            direction = 'left'
+        } else {
+            direction = 'center'
+        }
+
+        if (elementInViewport(secCont)) {
+            animate3dTilt(secCont, direction)
+        }
+    })
+}
+
+function animate3dTilt(element, direction) {
+    let dx
+    if (direction === 'right') {
+        dx = mouse.x / 1.5 - cx
+    } else if (direction === 'left') {
+        dx = mouse.x - cx / 1.5
+    } else {
+        dx = mouse.x - cx
+    }
     const dy = (mouse.y - cy) / 1.5
     tiltx = -dy / cy
     tilty = dx / cx
@@ -69,24 +95,6 @@ function animate3dTilt(element, placement) {
     })
 }
 
-barba.init({
-    transitions: [
-        {
-            preventRunning: 'rules',
-            enter(data) {
-                data.next.container.classList.add('barba--fixed')
-                tlContainerRotation.eventCallback('onComplete', () => {
-                    data.next.container.classList.remove('barba--fixed')
-                })
-                return tlContainerRotation.play()
-            },
-            after() {
-                init()
-            },
-        },
-    ],
-})
-
 window.addEventListener('resize', () => {
     cx = window.innerWidth / 2
     cy = window.innerHeight / 2
@@ -94,7 +102,6 @@ window.addEventListener('resize', () => {
 
 function init() {
     on = true
-
     window.scrollTo(0, 0)
 
     lenis = new Lenis({
@@ -104,51 +111,100 @@ function init() {
         mouseMultiplier: 1.2,
     })
 
-    sec = select('#sec')
-    container = select('.container')
-    containerWrapper = select('.container-wrapper')
-    containerFg = container.querySelector('.container__fg')
-    containerBg = container.querySelector('.container__bg')
-    contAni = () => {
-        const direction = sec.classList.contains('sec--right') ? 'right' : 'left'
-        animate3dTilt(container, direction)
+    secs = document.querySelectorAll('.sec')
+
+    secs.forEach((element) => {
+        const secCont = element.querySelector(containerClass)
+        const secContFg = element.querySelector(containerFgClass)
+        ScrollTrigger.create({
+            trigger: secCont,
+            start: 'top center',
+            end: 'bottom top',
+            animation: gsap.fromTo(secContFg, { y: 0 }, { y: '-10%', ease: 'linear' }),
+            scrub: 1,
+        })
+    })
+
+    const tlWorkOutro = (element) => {
+        const section = document.querySelector(element)
+
+        const containerWrapper = section.querySelector(containerWrapperClass)
+        const container = section.querySelector(containerClass)
+        const containerFg = section.querySelector(containerFgClass)
+        const containerBg = section.querySelector(containerBgClass)
+        const tl = gsap
+            .timeline({ paused: true, defaults: { ease: 'power3.inOut', duration: 1 } })
+            .to(containerFg, { translateZ: '-5vw', ease: 'backInOutExp', duration: 1.5 })
+            .to(containerBg, { translateZ: '-20vw', ease: 'backInOutExp', duration: 1.5 }, '<+=0.2')
+            .add(() => {
+                const state = Flip.getState(containerWrapper)
+                containerWrapper.classList.toggle('fixed')
+                Flip.from(state, { duration: 1, ease: 'power2.inOut' })
+                gsap.to(container, { transform: 'rotate(0deg) rotateY(0deg) rotateX(0deg)', duration: 1.6 })
+            }, '0.6')
+            .add(() => {
+                gsap.to('.barba--fixed', {
+                    '--clip1': '0vh',
+                    ease: 'power3.out',
+                    duration: 1.2,
+                    onStart: () => {
+                        tl.pause()
+                    },
+                    onComplete: () => {
+                        tl.progress(1)
+                    },
+                })
+            }, '1.6')
+        return tl
     }
-    select('a').addEventListener('click', (e) => {
-        on = !on
-        lenis.destroy()
-    })
 
-    tlScroll = gsap.timeline({ paused: true, defaults: { ease: 'linear', duration: 3 } }).fromTo(containerFg, { y: 0 }, { y: -300 })
-    ScrollTrigger.create({
-        trigger: container,
-        start: 'top center',
-        end: 'bottom top',
-        animation: tlScroll,
-        scrub: 1,
-    })
+    const hrefs = document.querySelectorAll('a')
 
-    tlContainerRotation = gsap
-        .timeline({ paused: true, defaults: { ease: 'power3.inOut', duration: 1 } })
-        .to(containerFg, { translateZ: '-5vw', ease: 'backInOutExp', duration: 1.5 })
-        .to(containerBg, { translateZ: '-20vw', ease: 'backInOutExp', duration: 1.5 }, '<+=0.2')
-        .add(() => {
-            const state = Flip.getState(containerWrapper)
-            containerWrapper.classList.toggle('fixed')
-            Flip.from(state, { duration: 1, ease: 'power2.inOut' })
-            gsap.to(container, { transform: 'rotate(0deg) rotateY(0deg) rotateX(0deg)', duration: 1.6 })
-        }, '0.6')
-        .add(() => {
-            gsap.to('.barba--fixed', {
-                '--clip1': '0vh',
-                ease: 'power3.out',
-                duration: 1.2,
-                onStart: () => {
-                    tlContainerRotation.pause()
-                },
-                onComplete: () => {
-                    tlContainerRotation.progress(1)
-                },
-            })
-        }, '1.6')
-    console.log('qwe')
+    const gg = (path, tag) => path.find((e) => e.localName === tag)
+
+    hrefs.forEach((element) => {
+        element.addEventListener('click', (e) => {
+            const secId = gg(e.path, 'section').id
+
+            tlWorkClicked = tlWorkOutro('#' + secId)
+            on = !on
+            lenis.destroy()
+        })
+    })
+}
+
+barba.init({
+    transitions: [
+        {
+            preventRunning: 'rules',
+            enter(data) {
+                data.next.container.classList.add('barba--fixed')
+                tlWorkClicked.eventCallback('onComplete', () => {
+                    data.next.container.classList.remove('barba--fixed')
+                })
+                return tlWorkClicked.play()
+            },
+            after() {
+                init()
+            },
+        },
+    ],
+})
+
+function elementInViewport(elementToCheck) {
+    const element = elementToCheck
+    const bounding = element.getBoundingClientRect()
+    const elementHeight = element.offsetHeight
+    const elementWidth = element.offsetWidth
+
+    if (
+        bounding.top >= -elementHeight &&
+        bounding.left >= -elementWidth &&
+        bounding.right <= (window.innerWidth || document.documentElement.clientWidth) + elementWidth &&
+        bounding.bottom <= (window.innerHeight || document.documentElement.clientHeight) + elementHeight
+    ) {
+        return true
+    } else {
+        return false
+    }
 }
